@@ -1,0 +1,7 @@
+*.retry
+*.log
+inventory_dynamic.ini
+.vault_pass
+*.swp
+*.swo
+*~
