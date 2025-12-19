@@ -1,0 +1,61 @@
+name: Deploy Ansible Playbook
+
+on:
+  workflow_dispatch:
+    inputs:
+      server_ip:
+        description: 'Target server IP address'
+        required: true
+        type: string
+      ssh_user:
+        description: 'SSH user (default: ubuntu)'
+        required: false
+        default: 'ubuntu'
+        type: string
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    container:
+      image: cytopia/ansible:latest
+    permissions:
+      contents: read
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create SSH directory
+        run: mkdir -p ~/.ssh
+
+      - name: Add SSH key
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+
+      - name: Install required Ansible collections
+        run: |
+          ansible-galaxy collection install -r requirements.yml
+
+      - name: Create dynamic inventory
+        run: |
+          cat > inventory_dynamic.ini << EOF
+          [servers]
+          target ansible_host=${{ inputs.server_ip }} ansible_user=${{ inputs.ssh_user }}
+          EOF
+
+      - name: Add server to known_hosts
+        run: |
+          ssh-keyscan -H ${{ inputs.server_ip }} >> ~/.ssh/known_hosts
+
+      - name: Run Ansible playbook
+        run: |
+          ansible-playbook -i inventory_dynamic.ini playbook.yml -v
+
+      - name: Clean up
+        if: always()
+        run: |
+          rm -f ~/.ssh/id_rsa
+          rm -f inventory_dynamic.ini

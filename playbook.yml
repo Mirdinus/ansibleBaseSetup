@@ -1,0 +1,146 @@
+---
+- name: Base Server Setup and Hardening
+  hosts: all
+  become: yes
+  gather_facts: yes
+  
+  tasks:
+    - name: Copy authorized_keys for ubuntu user
+      ansible.builtin.copy:
+        src: "{{ lookup('env', 'HOME') }}/.ssh/authorized_keys"
+        dest: /home/ubuntu/.ssh/authorized_keys
+        owner: ubuntu
+        group: ubuntu
+        mode: '0600'
+      when: lookup('env', 'HOME') != ''
+      ignore_errors: yes
+      tags: [ssh, setup]
+
+    - name: Ensure .ssh directory exists for ubuntu user
+      ansible.builtin.file:
+        path: /home/ubuntu/.ssh
+        state: directory
+        owner: ubuntu
+        group: ubuntu
+        mode: '0700'
+      tags: [ssh, setup]
+
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: yes
+        cache_valid_time: 3600
+      tags: [update]
+
+    - name: Upgrade all packages
+      ansible.builtin.apt:
+        upgrade: dist
+        autoremove: yes
+        autoclean: yes
+      tags: [update, upgrade]
+
+    - name: Install htop
+      ansible.builtin.apt:
+        name: htop
+        state: present
+      tags: [packages]
+
+    - name: Install fail2ban
+      ansible.builtin.apt:
+        name: fail2ban
+        state: present
+      tags: [security, fail2ban]
+
+    - name: Ensure fail2ban is running and enabled
+      ansible.builtin.service:
+        name: fail2ban
+        state: started
+        enabled: yes
+      tags: [security, fail2ban]
+
+    - name: Remove nginx if installed
+      ansible.builtin.apt:
+        name: nginx
+        state: absent
+        purge: yes
+      tags: [cleanup]
+
+    - name: Remove apache2 if installed
+      ansible.builtin.apt:
+        name: apache2
+        state: absent
+        purge: yes
+      tags: [cleanup]
+
+    - name: Configure SSH - Disable password authentication
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PasswordAuthentication'
+        line: 'PasswordAuthentication no'
+        state: present
+      notify: Restart SSH
+      tags: [security, ssh]
+
+    - name: Configure SSH - Disable root login
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PermitRootLogin'
+        line: 'PermitRootLogin no'
+        state: present
+      notify: Restart SSH
+      tags: [security, ssh]
+
+    - name: Configure SSH - Disable empty passwords
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PermitEmptyPasswords'
+        line: 'PermitEmptyPasswords no'
+        state: present
+      notify: Restart SSH
+      tags: [security, ssh]
+
+    - name: Install UFW
+      ansible.builtin.apt:
+        name: ufw
+        state: present
+      tags: [security, firewall]
+
+    - name: Set UFW default deny incoming
+      community.general.ufw:
+        direction: incoming
+        policy: deny
+      tags: [security, firewall]
+
+    - name: Set UFW default allow outgoing
+      community.general.ufw:
+        direction: outgoing
+        policy: allow
+      tags: [security, firewall]
+
+    - name: Allow SSH through UFW
+      community.general.ufw:
+        rule: allow
+        port: '22'
+        proto: tcp
+      tags: [security, firewall]
+
+    - name: Enable UFW
+      community.general.ufw:
+        state: enabled
+      tags: [security, firewall]
+
+    - name: Get UFW status
+      ansible.builtin.command: ufw status verbose
+      register: ufw_status
+      changed_when: false
+      tags: [security, firewall]
+
+    - name: Display UFW status
+      ansible.builtin.debug:
+        var: ufw_status.stdout_lines
+      tags: [security, firewall]
+
+  handlers:
+    - name: Restart SSH
+      ansible.builtin.service:
+        name: sshd
+        state: restarted
