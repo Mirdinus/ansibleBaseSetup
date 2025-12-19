@@ -24,11 +24,14 @@
 pip install ansible
 ansible-galaxy collection install -r requirements.yml
 
-# Edit inventory with your server IP
-nano inventory.ini
+# Create inventory with your server IP
+cat > inventory.ini << EOF
+[servers]
+server1 ansible_host=YOUR_SERVER_IP
+EOF
 
 # Run playbook
-ansible-playbook playbook.yml
+ansible-playbook -i inventory.ini playbook.yml
 ```
 
 ## What Gets Configured

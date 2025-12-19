@@ -1,5 +1,6 @@
 *.retry
 *.log
+inventory.ini
 inventory_dynamic.ini
 .vault_pass
 *.swp

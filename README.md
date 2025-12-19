@@ -36,20 +36,17 @@ ansible-galaxy collection install -r requirements.yml
 
 ### Running the Playbook
 
-1. Edit `inventory.ini` and add your server IP addresses:
-```ini
+1. Create an inventory file with your server IP addresses:
+```bash
+cat > inventory.ini << EOF
 [servers]
 server1 ansible_host=192.168.1.10
+EOF
 ```
 
 2. Run the playbook:
 ```bash
-ansible-playbook playbook.yml
-```
-
-Or specify a custom inventory:
-```bash
-ansible-playbook -i custom_inventory.ini playbook.yml
+ansible-playbook -i inventory.ini playbook.yml
 ```
 
 ### Running Specific Tasks
@@ -121,8 +118,8 @@ The playbook applies the following SSH hardening measures:
 
 If you encounter issues:
 1. Verify SSH connectivity: `ssh ubuntu@<server_ip>`
-2. Check Ansible can reach the host: `ansible all -m ping -i inventory.ini`
-3. Run playbook in verbose mode: `ansible-playbook playbook.yml -vvv`
+2. Check Ansible can reach the host: `ansible all -m ping -i <your_inventory_file>`
+3. Run playbook in verbose mode: `ansible-playbook -i <your_inventory_file> playbook.yml -vvv`
 
 ## License
 
