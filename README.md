@@ -89,7 +89,8 @@ This repository includes a GitHub Actions workflow that can be triggered manuall
 6. Click "Run workflow"
 
 The workflow will:
-- Install Ansible
+- Use a Docker container with Ansible pre-installed
+- Install required Ansible collections
 - Create a dynamic inventory with your server IP
 - Run the playbook against your server
 - Clean up sensitive data
